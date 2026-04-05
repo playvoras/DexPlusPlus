@@ -5,10 +5,10 @@ cloneref = cloneref or function(Ref)
 
 	if not getreg then
 		local Proxy = newproxy(true)
-		local Mt = getmetatable(Proxy) :: any
+		local Mt = getmetatable(Proxy)
 
-		Mt.__index = function(_, Key: string): any
-			local Value = (Ref :: any)[Key]
+		Mt.__index = function(_, Key)
+			local Value = Ref[Key]
 			if type(Value) == "function" then
 				return function(Self, ...)
 					return Value(rawequal(Self, Proxy) and Ref or Self, ...)
@@ -17,22 +17,22 @@ cloneref = cloneref or function(Ref)
 			return Value
 		end
 
-		Mt.__newindex = function(_, Key: string, Value: any)
-			;(Ref :: any)[Key] = Value
+		Mt.__newindex = function(_, Key, Value)
+			Ref[Key] = Value
 		end
 
-		Mt.__tostring = function(): string
+		Mt.__tostring = function()
 			return tostring(Ref)
 		end
 
-		Mt.__eq = function(A, B): boolean
+		Mt.__eq = function(A, B)
 			return rawequal(A, B)
 		end
 
-		return Proxy :: any
+		return Proxy
 	end
 
-	local InstanceList: {[any]: any}?
+	local InstanceList
 	local Probe = Instance.new("Part")
 
 	for _, Entry in pairs(getreg()) do
