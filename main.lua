@@ -1,36 +1,70 @@
 local oldgame = oldgame or game
 
-cloneref = cloneref or function(ref)
-	if not getreg then return ref end
-	
-	local InstanceList
-	
-	local a = Instance.new("Part")
-	for _, c in pairs(getreg()) do
-		if type(c) == "table" and #c then
-			if rawget(c, "__mode") == "kvs" then
-				for d, e in pairs(c) do
-					if e == a then
-						InstanceList = c
-						break
-					end
+cloneref = cloneref or function(Ref)
+	assert(typeof(Ref) == "Instance", "Expected Instance, got " .. typeof(Ref))
+
+	if not getreg then
+		local Proxy = newproxy(true)
+		local Mt = getmetatable(Proxy) :: any
+
+		Mt.__index = function(_, Key: string): any
+			local Value = (Ref :: any)[Key]
+			if type(Value) == "function" then
+				return function(Self, ...)
+					return Value(rawequal(Self, Proxy) and Ref or Self, ...)
+				end
+			end
+			return Value
+		end
+
+		Mt.__newindex = function(_, Key: string, Value: any)
+			;(Ref :: any)[Key] = Value
+		end
+
+		Mt.__tostring = function(): string
+			return tostring(Ref)
+		end
+
+		Mt.__eq = function(A, B): boolean
+			return rawequal(A, B)
+		end
+
+		return Proxy :: any
+	end
+
+	local InstanceList: {[any]: any}?
+	local Probe = Instance.new("Part")
+
+	for _, Entry in pairs(getreg()) do
+		if type(Entry) == "table" and rawget(Entry, "__mode") == "kvs" then
+			for Key, Value in pairs(Entry) do
+				if Value == Probe then
+					InstanceList = Entry
+					break
 				end
 			end
 		end
+		if InstanceList then break end
 	end
-	local f = {}
-	function f.invalidate(g)
-		if not InstanceList then
-			return
-		end
-		for b, c in pairs(InstanceList) do
-			if c == g then
-				InstanceList[b] = nil
-				return g
-			end
+
+	Probe:Destroy()
+
+	if not InstanceList then return Ref end
+
+	for Key, Value in pairs(InstanceList) do
+		if Value == Probe then
+			InstanceList[Key] = nil
 		end
 	end
-	return f.invalidate
+
+	for Key, Value in pairs(InstanceList) do
+		if Value == Ref then
+			InstanceList[Key] = nil
+			break
+		end
+	end
+
+	return Ref
 end
 
 local isFsSupported = readfile and writefile and isfile and isfolder and listfiles and delfile and delfolder
